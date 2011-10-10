@@ -3,7 +3,7 @@ use strict;
 use warnings;
 
 BEGIN {
-    our $VERSION = '0.01';
+    our $VERSION = '0.02';
     our @EXPORT  = qw[fgets];
 
     require XSLoader; XSLoader::load(__PACKAGE__, $VERSION);
@@ -87,7 +87,7 @@ Current implementation has no understanding of Unicode (UTF-X), only octets.
 
 =over 4
 
-=item L<perl> 5.6 or greater.
+=item L<perl> 5.8.1 or greater.
 
 =item L<Exporter>, core module.
 
@@ -101,11 +101,11 @@ In addition to Run-Time:
 
 =item C compiler.
 
-=item L<Test::More> 0.47 or greater, core module since 5.6.2.
+=item L<IO::File>.
+
+=item L<Test::More>
 
 =item L<Test::HexString>.
-
-=item L<IO::File>.
 
 =back
 

@@ -7,16 +7,21 @@ MODULE = PerlIO::fgets    PACKAGE = PerlIO::fgets
 
 PROTOTYPES: ENABLE
 
-SV *
+void
 fgets(fp, count)
     PerlIO *fp
-    ssize_t count
-
-  CODE:
+    SSize_t count
+  PROTOTYPE:
+    *$
+  PREINIT:
+    dXSTARG;
+  PPCODE:
     if (count < 0)
         XSRETURN_UNDEF;
 
-    RETVAL = newSVpvn("", 0);
+    SvUPGRADE(TARG, SVt_PV);
+    SvGROW(TARG, 256);
+    SvCUR_set(TARG, 0);
 
     if (PerlIO_fast_gets(fp)) {
 
@@ -34,52 +39,40 @@ fgets(fp, count)
                 if (found != NULL)
                     count = take = ++found - ptr;
 
-                sv_catpvn(RETVAL, ptr, take);
+                sv_catpvn_nomg(TARG, ptr, take);
                 count -= take;
                 avail -= take;
                 PerlIO_set_ptrcnt(fp, (void *)ptr + take, avail);
             }
 
-            if (count > 0 && avail <= 0) {
-#if ((PERL_REVISION == 5) && (PERL_VERSION >= 7))
+            if (count > 0 && avail <= 0)
                 if (PerlIO_fill(fp) != 0)
                     break;
-#else
-                const int ch = PerlIO_getc(fp);
-                if (ch == EOF)
-                    break;
-
-                PerlIO_ungetc(fp, ch);
-#endif
-            }
         }
     }
     else {
-        STDCHAR buf[8192];
-        SSize_t copy;
         int ch = EOF;
 
         while (count > 0) {
-            STDCHAR *bp = buf;
-            STDCHAR *bpe = buf + sizeof(buf);
+            SvGROW(TARG, SvCUR(TARG) + 256);
+            STDCHAR *cur = SvPVX(TARG) + SvCUR(TARG);
+            STDCHAR *end = SvPVX(TARG) + SvLEN(TARG) - 1;
 
-            while (bp < bpe && count-- > 0 && (ch = PerlIO_getc(fp)) != EOF)
-                if ((*bp++ = ch) == '\n')
+            while (cur < end && count-- > 0 && (ch = PerlIO_getc(fp)) != EOF)
+                if ((*cur++ = ch) == '\n')
                     break;
 
-            if ((copy = bp - buf) > 0)
-                sv_catpvn(RETVAL, buf, copy);
+            SvCUR_set(TARG, cur - SvPVX(TARG));
 
             if (ch == EOF || ch == '\n')
                 break;
         }
     }
 
-    if (PerlIO_error(fp)) {
-        SvREFCNT_dec(RETVAL);
+    if (PerlIO_error(fp))
         XSRETURN_UNDEF;
-    }
 
-  OUTPUT:
-    RETVAL
+    *SvEND(TARG) = '\0';
+    SvPOK_only(TARG);
+    PUSHTARG;
 
